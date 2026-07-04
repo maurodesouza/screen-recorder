@@ -5,6 +5,7 @@ export interface ScreenRecorder {
 export interface RecorderOptions {
   onStop: (recording: Blob) => void
   userStream?: MediaStream | null
+  tabAudioStream?: MediaStream | null
   getWebcamPosition?: () => { x: number; y: number }
 }
 
@@ -65,16 +66,19 @@ function composeStreams(
 export async function startRecording({
   onStop,
   userStream,
+  tabAudioStream,
   getWebcamPosition,
 }: RecorderOptions): Promise<ScreenRecorder> {
+  // Video only — browsers can't reliably capture audio from screens/windows.
+  // Sound comes from the mic and/or a dedicated tab audio capture instead.
   const screenStream = await navigator.mediaDevices.getDisplayMedia({
     video: { frameRate: { ideal: 30 } },
-    audio: true,
+    audio: false,
   })
 
   const webcamTrack = userStream?.getVideoTracks()[0] ?? null
   const micTracks = userStream?.getAudioTracks() ?? []
-  const screenAudioTracks = screenStream.getAudioTracks()
+  const tabAudioTracks = tabAudioStream?.getAudioTracks() ?? []
 
   let videoTracks: MediaStreamTrack[]
   let cleanupCompositor: (() => void) | null = null
@@ -90,14 +94,14 @@ export async function startRecording({
   let audioTracks: MediaStreamTrack[]
   let audioContext: AudioContext | null = null
 
-  if (screenAudioTracks.length && micTracks.length) {
+  if (tabAudioTracks.length && micTracks.length) {
     audioContext = new AudioContext()
     const destination = audioContext.createMediaStreamDestination()
-    audioContext.createMediaStreamSource(new MediaStream(screenAudioTracks)).connect(destination)
+    audioContext.createMediaStreamSource(new MediaStream(tabAudioTracks)).connect(destination)
     audioContext.createMediaStreamSource(new MediaStream(micTracks)).connect(destination)
     audioTracks = destination.stream.getAudioTracks()
   } else {
-    audioTracks = [...screenAudioTracks, ...micTracks]
+    audioTracks = [...tabAudioTracks, ...micTracks]
   }
 
   const mimeType = pickMimeType()
@@ -116,6 +120,7 @@ export async function startRecording({
     void audioContext?.close()
     screenStream.getTracks().forEach((track) => track.stop())
     userStream?.getTracks().forEach((track) => track.stop())
+    tabAudioStream?.getTracks().forEach((track) => track.stop())
     onStop(new Blob(chunks, { type: mimeType || 'video/webm' }))
   })
 

@@ -1,6 +1,7 @@
 import './style.css'
 import { startRecording, type ScreenRecorder } from './recorder.ts'
 import { saveRecording } from './save-file.ts'
+import { captureTabAudio, TabAudioError } from './tab-audio.ts'
 import { setupTheme } from './theme.ts'
 import { createWebcamOverlay } from './webcam-overlay.ts'
 
@@ -34,7 +35,16 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
           <input id="cam-toggle" type="checkbox" class="size-4 accent-red-600" />
           Webcam
         </label>
+        <label class="flex cursor-pointer items-center gap-2">
+          <input id="tab-audio-toggle" type="checkbox" class="size-4 accent-red-600" />
+          Tab audio
+        </label>
       </div>
+
+      <p class="max-w-sm text-xs text-neutral-400 dark:text-neutral-500">
+        Browsers can only capture sound from a browser tab — screen and window recordings are
+        video-only. Enable "Tab audio" to include sound from a tab of your choice.
+      </p>
 
       <p id="timer" class="hidden font-mono text-3xl tabular-nums" aria-live="polite">00:00</p>
 
@@ -68,6 +78,7 @@ const timer = document.querySelector<HTMLParagraphElement>('#timer')!
 const status = document.querySelector<HTMLParagraphElement>('#status')!
 const micToggle = document.querySelector<HTMLInputElement>('#mic-toggle')!
 const camToggle = document.querySelector<HTMLInputElement>('#cam-toggle')!
+const tabAudioToggle = document.querySelector<HTMLInputElement>('#tab-audio-toggle')!
 const webcamOverlay = createWebcamOverlay()
 
 let recorder: ScreenRecorder | null = null
@@ -127,14 +138,34 @@ recordButton.addEventListener('click', async () => {
     }
   }
 
+  const cleanupStreams = () => {
+    userStream?.getTracks().forEach((track) => track.stop())
+    tabAudioStream?.getTracks().forEach((track) => track.stop())
+  }
+
+  let tabAudioStream: MediaStream | null = null
+  if (tabAudioToggle.checked) {
+    try {
+      status.textContent = 'Pick the tab whose audio should be recorded.'
+      tabAudioStream = await captureTabAudio()
+      status.textContent = ''
+    } catch (error) {
+      cleanupStreams()
+      status.textContent =
+        error instanceof TabAudioError ? error.message : 'Could not capture tab audio.'
+      return
+    }
+  }
+
   try {
     recorder = await startRecording({
       onStop: handleRecordingStopped,
       userStream,
+      tabAudioStream,
       getWebcamPosition: webcamOverlay.getPosition,
     })
   } catch {
-    userStream?.getTracks().forEach((track) => track.stop())
+    cleanupStreams()
     status.textContent = 'Screen capture was blocked or canceled.'
     return
   }
