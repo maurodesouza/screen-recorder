@@ -4,7 +4,56 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>screen-recorder</title>
+    <title>Screen Recorder — Free Online Screen Recording Tool</title>
+    <meta
+      name="description"
+      content="Record your screen for free, right in your browser. No installs, no sign-up, no watermarks. Save the video file directly to your computer."
+    />
+    <meta
+      name="keywords"
+      content="screen recorder, screen recording, record screen online, free screen capture, browser screen recorder"
+    />
+    <link rel="canonical" href="https://maurodesouza.github.io/screen-recorder/" />
+    <meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Screen Recorder — Free Online Screen Recording Tool" />
+    <meta
+      property="og:description"
+      content="Record your screen for free, right in your browser. No installs, no sign-up, no watermarks."
+    />
+    <meta property="og:url" content="https://maurodesouza.github.io/screen-recorder/" />
+    <meta property="og:site_name" content="Screen Recorder" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Screen Recorder — Free Online Screen Recording Tool" />
+    <meta
+      name="twitter:description"
+      content="Record your screen for free, right in your browser. No installs, no sign-up, no watermarks."
+    />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Screen Recorder",
+        "url": "https://maurodesouza.github.io/screen-recorder/",
+        "description": "Record your screen for free, right in your browser. No installs, no sign-up, no watermarks.",
+        "applicationCategory": "MultimediaApplication",
+        "operatingSystem": "Any",
+        "offers": { "@type": "Offer", "price": "0" }
+      }
+    </script>
+
+    <script>
+      const theme = localStorage.getItem('theme')
+      if (theme === 'dark' || (!theme && matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark')
+      }
+    </script>
   </head>
   <body>
     <div id="app"></div>
