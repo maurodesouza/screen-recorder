@@ -2,6 +2,7 @@ import './style.css'
 import { startRecording, type ScreenRecorder } from './recorder.ts'
 import { saveRecording } from './save-file.ts'
 import { setupTheme } from './theme.ts'
+import { createWebcamOverlay } from './webcam-overlay.ts'
 
 document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
 <div class="flex min-h-screen flex-col bg-white text-neutral-900 transition-colors dark:bg-neutral-950 dark:text-neutral-100">
@@ -24,6 +25,17 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
     </div>
 
     <div class="flex flex-col items-center gap-4">
+      <div class="flex items-center gap-6 text-sm">
+        <label class="flex cursor-pointer items-center gap-2">
+          <input id="mic-toggle" type="checkbox" class="size-4 accent-red-600" />
+          Microphone
+        </label>
+        <label class="flex cursor-pointer items-center gap-2">
+          <input id="cam-toggle" type="checkbox" class="size-4 accent-red-600" />
+          Webcam
+        </label>
+      </div>
+
       <p id="timer" class="hidden font-mono text-3xl tabular-nums" aria-live="polite">00:00</p>
 
       <button id="record" type="button"
@@ -54,6 +66,9 @@ const recordButton = document.querySelector<HTMLButtonElement>('#record')!
 const stopButton = document.querySelector<HTMLButtonElement>('#stop')!
 const timer = document.querySelector<HTMLParagraphElement>('#timer')!
 const status = document.querySelector<HTMLParagraphElement>('#status')!
+const micToggle = document.querySelector<HTMLInputElement>('#mic-toggle')!
+const camToggle = document.querySelector<HTMLInputElement>('#cam-toggle')!
+const webcamOverlay = createWebcamOverlay()
 
 let recorder: ScreenRecorder | null = null
 let timerInterval: number | undefined
@@ -63,6 +78,8 @@ function setRecordingUI(recording: boolean) {
   stopButton.classList.toggle('hidden', !recording)
   stopButton.classList.toggle('inline-flex', recording)
   timer.classList.toggle('hidden', !recording)
+  micToggle.disabled = recording
+  camToggle.disabled = recording
 }
 
 function startTimer() {
@@ -84,6 +101,7 @@ async function handleRecordingStopped(recording: Blob) {
   recorder = null
   stopTimer()
   setRecordingUI(false)
+  webcamOverlay.hide()
 
   try {
     const saved = await saveRecording(recording)
@@ -95,13 +113,40 @@ async function handleRecordingStopped(recording: Blob) {
 
 recordButton.addEventListener('click', async () => {
   status.textContent = ''
-  try {
-    recorder = await startRecording({ onStop: handleRecordingStopped })
-    setRecordingUI(true)
-    startTimer()
-  } catch {
-    status.textContent = 'Screen capture was blocked or canceled.'
+
+  let userStream: MediaStream | null = null
+  if (micToggle.checked || camToggle.checked) {
+    try {
+      userStream = await navigator.mediaDevices.getUserMedia({
+        audio: micToggle.checked,
+        video: camToggle.checked ? { width: { ideal: 1280 } } : false,
+      })
+    } catch {
+      status.textContent = 'Microphone/webcam access was denied.'
+      return
+    }
   }
+
+  try {
+    recorder = await startRecording({
+      onStop: handleRecordingStopped,
+      userStream,
+      getWebcamPosition: webcamOverlay.getPosition,
+    })
+  } catch {
+    userStream?.getTracks().forEach((track) => track.stop())
+    status.textContent = 'Screen capture was blocked or canceled.'
+    return
+  }
+
+  const webcamTrack = userStream?.getVideoTracks()[0]
+  if (webcamTrack) {
+    webcamOverlay.show(new MediaStream([webcamTrack]))
+    status.textContent = 'Drag the camera preview to position it in the recording.'
+  }
+
+  setRecordingUI(true)
+  startTimer()
 })
 
 stopButton.addEventListener('click', () => recorder?.stop())
