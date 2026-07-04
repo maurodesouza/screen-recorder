@@ -1,5 +1,5 @@
 <div align="center" id="top">
-  <img src="https://maurodesouza.github.io/screen-recorder/assets/app.png" width="200" alt="Screen Recorder" />
+  <img src="https://maurodesouza.github.io/screen-recorder/assets/app.png" width="800" alt="Screen Recorder" />
 
   <a href="https://maurodesouza.github.io/screen-recorder/">Demo</a>
 </div>
